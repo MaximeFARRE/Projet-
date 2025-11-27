@@ -1,15 +1,17 @@
 # src/config.py
 from pathlib import Path
 
-# Paths
+# Root paths
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+
 DATA_DIR = PROJECT_ROOT / "data"
 RAW_DIR = DATA_DIR / "raw"
 PROCESSED_DIR = DATA_DIR / "processed"
+
 REPORT_FIG_DIR = PROJECT_ROOT / "reports" / "figures"
 REPORT_TABLE_DIR = PROJECT_ROOT / "reports" / "tables"
 
 # Finance / dataset
-TICKERS = ["AAPL", "MSFT", "AMZN", "GOOGL", "META"]
+TICKERS = ["AAPL", "MSFT", "AMZN", "GOOGL", "META"]  # 5 tech stocks
 TEST_RATIO = 0.2
 SEED = 42
