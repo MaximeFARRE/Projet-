@@ -12,7 +12,8 @@ class PortfolioEnv(gym.Env):
 
     - Observation: feature vector for the current date (e.g. technical indicators)
     - Action: portfolio weights over assets (continuous, sum to 1)
-    - Reward: portfolio daily return (optionally minus transaction costs)
+    - Reward: financial reward based on log-return net of transaction costs
+              and a penalty on drawdown.
     """
 
     metadata = {"render_modes": ["human"]}
@@ -23,6 +24,7 @@ class PortfolioEnv(gym.Env):
         features: pd.DataFrame | None = None,
         initial_capital: float = 1.0,
         transaction_cost: float = 0.0,
+        drawdown_penalty: float = 0.1,  # alpha: strength of drawdown penalty
     ):
         super().__init__()
 
@@ -49,6 +51,7 @@ class PortfolioEnv(gym.Env):
 
         self.initial_capital = initial_capital
         self.transaction_cost = transaction_cost
+        self.drawdown_penalty = drawdown_penalty
 
         # Observation: feature vector for one date
         self.observation_space = spaces.Box(
@@ -69,6 +72,7 @@ class PortfolioEnv(gym.Env):
         # Internal state
         self._current_step: int = 0
         self._portfolio_value: float = self.initial_capital
+        self._peak_value: float = self.initial_capital  # for drawdown
         self._weights = np.full(self.n_assets, 1.0 / self.n_assets)
 
     # ---------- Helpers ----------
@@ -93,6 +97,7 @@ class PortfolioEnv(gym.Env):
         super().reset(seed=seed)
         self._current_step = 0
         self._portfolio_value = self.initial_capital
+        self._peak_value = self.initial_capital
         self._weights = np.full(self.n_assets, 1.0 / self.n_assets)
 
         obs = self._get_observation()
@@ -100,6 +105,7 @@ class PortfolioEnv(gym.Env):
             "portfolio_value": self._portfolio_value,
             "step": self._current_step,
             "date": self.dates[self._current_step],
+            "drawdown": 0.0,
         }
         return obs, info
 
@@ -124,8 +130,25 @@ class PortfolioEnv(gym.Env):
         # Portfolio return before costs
         portfolio_return = float(np.dot(new_weights, asset_returns))
 
-        # Update portfolio value (net of transaction costs)
-        self._portfolio_value *= (1.0 + portfolio_return - cost)
+        # Net return including transaction cost
+        net_return = portfolio_return - cost
+
+        # Update portfolio value
+        # Avoid catastrophic negative net_return
+        self._portfolio_value *= (1.0 + net_return)
+
+        # Update peak value and compute drawdown
+        if self._portfolio_value > self._peak_value:
+            self._peak_value = self._portfolio_value
+
+        drawdown = float(self._portfolio_value / self._peak_value - 1.0)
+
+        # Compute reward:
+        # - log-return of net performance
+        # - plus a penalty proportional to drawdown (drawdown <= 0)
+        net_return_clipped = max(net_return, -0.999)  # avoid log(<=0)
+        log_reward = float(np.log(1.0 + net_return_clipped))
+        reward = log_reward + self.drawdown_penalty * drawdown
 
         # Update internal state
         self._weights = new_weights
@@ -133,9 +156,6 @@ class PortfolioEnv(gym.Env):
 
         terminated = self._current_step >= (self.n_steps - 1)
         truncated = False
-
-        # Reward: here simply the daily portfolio return
-        reward = portfolio_return
 
         if not terminated:
             obs = self._get_observation()
@@ -148,7 +168,9 @@ class PortfolioEnv(gym.Env):
         info = {
             "portfolio_value": self._portfolio_value,
             "portfolio_return": portfolio_return,
+            "net_return": net_return,
             "turnover": turnover,
+            "drawdown": drawdown,
             "step": self._current_step,
             "date": info_date,
         }
