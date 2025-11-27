@@ -24,7 +24,8 @@ class PortfolioEnv(gym.Env):
         features: pd.DataFrame | None = None,
         initial_capital: float = 1.0,
         transaction_cost: float = 0.0,
-        drawdown_penalty: float = 0.1,  # alpha: strength of drawdown penalty
+        drawdown_penalty: float = 0.1,     # alpha: strength of drawdown penalty
+        max_weight_per_asset: float = 0.4, # allocation constraint (e.g. 40% max)
     ):
         super().__init__()
 
@@ -52,6 +53,7 @@ class PortfolioEnv(gym.Env):
         self.initial_capital = initial_capital
         self.transaction_cost = transaction_cost
         self.drawdown_penalty = drawdown_penalty
+        self.max_weight_per_asset = max_weight_per_asset
 
         # Observation: feature vector for one date
         self.observation_space = spaces.Box(
@@ -61,7 +63,7 @@ class PortfolioEnv(gym.Env):
             dtype=np.float32,
         )
 
-        # Action: weights per asset (continuous [0, 1])
+        # Action: weights per asset (continuous [0, 1] before projection)
         self.action_space = spaces.Box(
             low=0.0,
             high=1.0,
@@ -91,6 +93,58 @@ class PortfolioEnv(gym.Env):
         row = self.features.iloc[self._current_step].astype(np.float32).values
         return row
 
+    def _project_weights_with_cap(self, action: np.ndarray) -> np.ndarray:
+        """
+        Project raw action onto the feasible set:
+            w_i >= 0, sum(w_i) = 1, w_i <= max_weight_per_asset
+        using a simple iterative capping + redistribution scheme.
+        """
+        n = self.n_assets
+        w = np.asarray(action, dtype=np.float32)
+
+        # Step 1: ensure non-negative
+        w = np.maximum(w, 0.0)
+
+        # If everything is zero -> uniform
+        if w.sum() <= 0:
+            return np.full(n, 1.0 / n, dtype=np.float32)
+
+        # Step 2: normalize to sum = 1
+        w = w / w.sum()
+
+        cap = float(self.max_weight_per_asset)
+
+        # Step 3: iterative capping and redistribution
+        # (n is small, so a simple loop is fine)
+        while True:
+            over_cap = w > cap + 1e-8
+            if not over_cap.any():
+                break
+
+            # Excess mass above the cap
+            excess = (w[over_cap] - cap).sum()
+
+            # Cap the ones above the limit
+            w[over_cap] = cap
+
+            # Redistribute excess on remaining assets
+            under_cap = ~over_cap
+            if not under_cap.any():
+                # All assets capped: renormalize and break
+                w = w / w.sum()
+                break
+
+            w[under_cap] += excess / under_cap.sum()
+
+        # Final clean-up: clip small negatives and renormalize
+        w = np.maximum(w, 0.0)
+        if w.sum() <= 0:
+            w = np.full(n, 1.0 / n, dtype=np.float32)
+        else:
+            w = w / w.sum()
+
+        return w.astype(np.float32)
+
     # ---------- Gymnasium API ----------
 
     def reset(self, seed: int | None = None, options=None):
@@ -110,14 +164,8 @@ class PortfolioEnv(gym.Env):
         return obs, info
 
     def step(self, action: np.ndarray):
-        # Clip action into [0, 1] and renormalize to sum to 1
-        action = np.asarray(action, dtype=np.float32)
-        action = np.clip(action, 0.0, 1.0)
-
-        if action.sum() <= 0:
-            new_weights = np.full(self.n_assets, 1.0 / self.n_assets)
-        else:
-            new_weights = action / action.sum()
+        # Project action into feasible portfolio weights
+        new_weights = self._project_weights_with_cap(action)
 
         # Transaction costs based on turnover (L1 distance between weight vectors)
         turnover = float(np.abs(new_weights - self._weights).sum())
@@ -134,7 +182,6 @@ class PortfolioEnv(gym.Env):
         net_return = portfolio_return - cost
 
         # Update portfolio value
-        # Avoid catastrophic negative net_return
         self._portfolio_value *= (1.0 + net_return)
 
         # Update peak value and compute drawdown
@@ -143,9 +190,7 @@ class PortfolioEnv(gym.Env):
 
         drawdown = float(self._portfolio_value / self._peak_value - 1.0)
 
-        # Compute reward:
-        # - log-return of net performance
-        # - plus a penalty proportional to drawdown (drawdown <= 0)
+        # Compute reward: log-return + penalty on drawdown
         net_return_clipped = max(net_return, -0.999)  # avoid log(<=0)
         log_reward = float(np.log(1.0 + net_return_clipped))
         reward = log_reward + self.drawdown_penalty * drawdown
@@ -161,7 +206,6 @@ class PortfolioEnv(gym.Env):
             obs = self._get_observation()
             info_date = self.dates[self._current_step]
         else:
-            # Dummy obs at the end
             obs = np.zeros(self.n_features, dtype=np.float32)
             info_date = self.dates[self._current_step - 1]
 
@@ -173,6 +217,7 @@ class PortfolioEnv(gym.Env):
             "drawdown": drawdown,
             "step": self._current_step,
             "date": info_date,
+            "weights": self._weights.copy(),
         }
 
         return obs, reward, terminated, truncated, info
