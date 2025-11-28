@@ -10,3 +10,15 @@ For each ticker, the ANOVA procedure consistently selected MA20, MA60, the daily
 After feature selection, the Random Forest portfolio achieved a total return of 37.35% with a Sharpe ratio of 0.1345, outperforming the Markowitz minimum variance portfolio (35.1%) while remaining less efficient than the Equal-Weight benchmark in this bullish market regime.
 
 Feature selection reduced the dimensionality of the problem without degrading performance, confirming that ANOVA improves model interpretability and robustness while preventing overfitting.”*
+
+“We performed hyperparameter tuning for the Random Forest models using GridSearchCV (Lesson 6 — Hyperparameter optimization). The grid included n_estimators ∈ {100, 200, 500}, max_depth ∈ {None, 5, 10}, and min_samples_split ∈ {2, 5}, with 3-fold cross-validation and accuracy as the scoring function. The selected hyperparameters differed slightly across assets, but typically favored deeper trees and a moderate number of estimators, confirming the trade-off between model complexity and robustness.”
+Section : Hyperparameter Tuning — Lesson 6)
+
+**To comply with the course requirements (Lesson 6 — Hyperparameter Tuning), we performed GridSearchCV to optimize the Random Forest models.
+The search space included n_estimators ∈ {100, 200, 500}, max_depth ∈ {None, 5, 10}, and min_samples_split ∈ {2, 5}, with 3-fold cross-validation and accuracy as the evaluation metric.
+
+The optimal hyperparameters varied slightly across assets, with most models favoring a moderate tree depth (max_depth = 5) and 100–200 estimators, while GOOGL benefited from a deeper tree (max_depth=None).
+This behavior is consistent with the bias–variance trade-off and confirms the advantage of tree-based ensemble methods in capturing asset-specific nonlinearities.
+
+After hyperparameter tuning, the Random Forest strategy achieved a stable performance of 37.29% total return and a Sharpe ratio of 0.136, outperforming the Markowitz Minimum Variance Portfolio while remaining more conservative than the Equal-Weight benchmark in this bullish market regime.
+GridSearchCV therefore validated the robustness of the model and prevented excessive overfitting.”*
