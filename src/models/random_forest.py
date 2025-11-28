@@ -49,6 +49,8 @@ def build_rf_data_for_ticker(
     return X_train, y_train, X_test, ret_next_test
 
 
+from src.features.feature_selection import anova_feature_selection
+
 def train_random_forest_models(
     prices: pd.DataFrame,
     features: pd.DataFrame,
@@ -57,27 +59,29 @@ def train_random_forest_models(
     n_estimators: int = 200,
     max_depth: int | None = None,
     random_state: int = 42,
+    top_k_features: int = 5,   # NEW
 ) -> Tuple[Dict[str, RandomForestClassifier], Dict[str, dict]]:
-    """
-    Train one RandomForestClassifier per ticker to predict next-day UP/DOWN.
 
-    Returns:
-        models: dict[ticker] -> trained RandomForestClassifier
-        meta:   dict[ticker] -> {
-                    "X_test": X_test,
-                    "ret_next_test": ret_next_test,
-                    "train_size": len(X_train),
-                    "feature_cols": feature column names,
-                }
-    """
     models: Dict[str, RandomForestClassifier] = {}
     meta: Dict[str, dict] = {}
 
     for ticker in tickers:
-        X_train, y_train, X_test, ret_next_test = build_rf_data_for_ticker(
+        # Build dataset
+        X_train_full, y_train, X_test_full, ret_next_test = build_rf_data_for_ticker(
             prices, features, ticker, train_end_date
         )
 
+        # --- NEW: Select top-k features using ANOVA ---
+        selected_features = anova_feature_selection(
+            X_train_full,
+            y_train,
+            top_k=top_k_features,
+        )
+
+        X_train = X_train_full[selected_features]
+        X_test = X_test_full[selected_features]
+
+        # Train RF
         clf = RandomForestClassifier(
             n_estimators=n_estimators,
             max_depth=max_depth,
@@ -90,8 +94,8 @@ def train_random_forest_models(
         meta[ticker] = {
             "X_test": X_test,
             "ret_next_test": ret_next_test,
+            "selected_features": selected_features,
             "train_size": len(X_train),
-            "feature_cols": list(X_train.columns),
         }
 
     return models, meta
