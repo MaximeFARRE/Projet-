@@ -47,6 +47,9 @@ def main():
 
     # 4) Supervised learning baseline (Random Forest)
     run_step("run_random_forest.py", "Run Random Forest supervised strategy")
+    
+    run_step("evaluate_ppo.py", "Evaluate PPO vs baselines and save allocation plots")
+
 
 
 if __name__ == "__main__":

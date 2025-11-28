@@ -10,14 +10,14 @@ REPORT_FIG_DIR = PROJECT_ROOT / "reports" / "figures"
 REPORT_TABLE_DIR = PROJECT_ROOT / "reports" / "tables"
 
 # Finance / dataset
-TICKERS = ["AAPL", "MSFT", "AMZN", "GOOGL"]  # Example tickers
+TICKERS = ["AAPL", "MSFT", "AMZN", "GOOGL"]  # Example tickers 4 minimum
 
 # Global time period for the project
 START_DATE = "2013-01-01"   # début de l’historique
 END_DATE = "2018-03-01"     # fin de l’historique
 
 # Train / test split (ratio sur la période START–END)
-TEST_RATIO = 0.2
+TEST_RATIO = 0.4
 
 SEED = 42
 
