@@ -18,14 +18,14 @@ def main():
 
     # 1) Load clean prices
     prices = load_prices()
-    print("✅ Prices loaded")
+    print("Prices loaded")
     print("Shape:", prices.shape)
     print("Date range:", prices.index.min().date(), "->", prices.index.max().date())
     print("Tickers:", list(prices.columns))
 
     # 2) Compute returns
     returns = compute_returns(prices)
-    print("\n✅ Returns computed")
+    print("\nReturns computed")
     print("Shape:", returns.shape)
 
     # 3) Save to disk

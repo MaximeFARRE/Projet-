@@ -68,7 +68,7 @@ def evaluate_ppo() -> None:
 
     portfolio_values = []
     dates = []
-    weights_list = []  # NEW: store allocation over time
+    weights_list = []  # store allocation over time
 
     while not done:
         action, _ = model.predict(obs, deterministic=True)
@@ -87,7 +87,7 @@ def evaluate_ppo() -> None:
         name="equity_ppo",
     )
 
-    # NEW: save weights over time if available
+    # save weights over time if available
     if weights_list:
         weights_df = pd.DataFrame(
             weights_list,
