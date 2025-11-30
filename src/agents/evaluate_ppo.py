@@ -106,6 +106,15 @@ def evaluate_ppo() -> None:
     # 7) Compute metrics
     metrics_baseline = simple_metrics(equity_baseline)
     metrics_ppo = simple_metrics(equity_ppo)
+    
+    print("\n=== METRICS: Buy & Hold (Equal-Weight) ===")
+    for k, v in metrics_baseline.items():
+        print(f"{k:20s}: {v:.6f}")
+
+    print("\n=== METRICS: PPO Reinforcement Learning ===")
+    for k, v in metrics_ppo.items():
+        print(f"{k:20s}: {v:.6f}")
+
 
     metrics_df = pd.DataFrame(
         [metrics_baseline, metrics_ppo],
