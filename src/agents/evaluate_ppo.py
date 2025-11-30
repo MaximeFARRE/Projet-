@@ -155,6 +155,9 @@ def evaluate_ppo() -> None:
         plt.savefig(alloc_fig_path)
         print("Allocation figure:", alloc_fig_path)
 
+    # 11) Print comparison table
+    print("\n=== COMPARISON TABLE ===")
+    print(metrics_df)
 
 
 def main():
