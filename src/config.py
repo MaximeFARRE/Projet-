@@ -1,25 +1,41 @@
 # src/config.py
+
+# Global configuration for the project.
+
+# NOTE:
+# you only need to edit the block "USER SETTINGS" below.
+
+
 from pathlib import Path
 
-# Paths
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-DATA_DIR = PROJECT_ROOT / "data"
-RAW_DIR = DATA_DIR / "raw"
-PROCESSED_DIR = DATA_DIR / "processed"
-REPORT_FIG_DIR = PROJECT_ROOT / "reports" / "figures"
-REPORT_TABLE_DIR = PROJECT_ROOT / "reports" / "tables"
+# ----------------------------------------------------
+# USER SETTINGS (EDIT IF NEEDED)
+# ----------------------------------------------------
 
-# Finance / dataset
-TICKERS = ["AAPL", "MSFT", "AMZN", "GOOGL","FB", "T","GS"]  # Example tickers 4 minimum
+# List of tickers used in the portfolio
+TICKERS = ["AAPL", "MSFT", "AMZN", "GOOGL", "FB", "T", "GS"]
 
 # Global time period for the project
-START_DATE = "2013-01-01"   # début de l’historique 2013/02/08
-END_DATE = "2018-03-01"     # fin de l’historique   2018/02/07
+START_DATE = "2013-01-01"   # start of historical data
+END_DATE = "2018-03-01"     # end of historical data
 
-# Train / test split (ratio sur la période START–END)
-TEST_RATIO = 0.4
+# Train / test split (ratio of the TOTAL period reserved for test)
+TEST_RATIO = 0.3
 
+# Global random seed (for reproducibility)
 SEED = 42
+
+# ----------------------------------------------------
+# PATHS (DO NOT EDIT)
+# ----------------------------------------------------
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+
+DATA_DIR = PROJECT_ROOT / "data"
+PROCESSED_DIR = DATA_DIR / "processed"
+
+REPORT_FIG_DIR = PROJECT_ROOT / "reports" / "figures"
+REPORT_TABLE_DIR = PROJECT_ROOT / "reports" / "tables"
 
 MODELS_DIR = PROJECT_ROOT / "models"
 PPO_MODEL_PATH = MODELS_DIR / "ppo_portfolio"
