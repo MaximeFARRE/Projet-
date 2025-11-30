@@ -34,6 +34,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DATA_DIR = PROJECT_ROOT / "data"
 PROCESSED_DIR = DATA_DIR / "processed"
 
+RAW_DIR = DATA_DIR / "raw"
 REPORT_FIG_DIR = PROJECT_ROOT / "reports" / "figures"
 REPORT_TABLE_DIR = PROJECT_ROOT / "reports" / "tables"
 

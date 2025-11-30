@@ -1,9 +1,16 @@
 # src/agents/train_ppo.py
+"""
+Train a PPO agent on the PortfolioEnv using the training data.
 
-import os
+Steps
+- load prices and split train / test
+- build technical features on the train period
+- create the gym environment
+- train PPO
+- save the trained model to disk
+"""
+
 from pathlib import Path
-
-import numpy as np
 
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import DummyVecEnv
@@ -16,18 +23,20 @@ from src.env.portfolio_env import PortfolioEnv
 
 
 def make_train_env(prices_train, features_train):
-    """
-    Create a callable that builds a PortfolioEnv for DummyVecEnv.
-    """
+    
+    #Return a function that creates a PortfolioEnv instance.
+
+    #This is used by DummyVecEnv to build the vectorized environment.
+    
 
     def _init():
-        # Align prices with features index
+        # Align prices with the feature index
         prices_aligned = prices_train.loc[features_train.index]
         env = PortfolioEnv(
             prices=prices_aligned,
             features=features_train,
             initial_capital=1.0,
-            transaction_cost=0.001,  # 0.1% costs per unit turnover
+            transaction_cost=0.001,  # 0.1% transaction cost per unit turnover
         )
         return env
 
@@ -38,42 +47,41 @@ def train_ppo(
     total_timesteps: int = 100_000,
     seed: int = 42,
 ) -> None:
-    """
-    Train a PPO agent on the PortfolioEnv using the training data.
-    """
+    #Train a PPO agent on the training period and save the model.
 
     # Ensure models directory exists
     MODELS_DIR.mkdir(parents=True, exist_ok=True)
 
-    # 1) Load prices and split
+    # Load prices and split into train / test
     prices = load_prices()
     prices_train, _ = split_train_test(prices)
 
-    # 2) Compute technical features on train set
+    # Compute technical features on the train set
     features_train = compute_technical_features(prices_train)
 
-    # 3) Build vectorized environment
+    # Build vectorized environment
     train_env_fn = make_train_env(prices_train, features_train)
     env = DummyVecEnv([train_env_fn])
 
-    # 4) Create PPO model
+    # Create PPO model (quiet mode: verbose=0)
     model = PPO(
         policy="MlpPolicy",
         env=env,
-        verbose=1,
+        verbose=0,  # no training table printed
         seed=seed,
     )
 
-    # 5) Train
+    # Train the agent
     model.learn(total_timesteps=total_timesteps)
 
-    # 6) Save model
+    # Save model to disk
     model.save(str(PPO_MODEL_PATH))
-    print(f"PPO model saved to: {PPO_MODEL_PATH}.zip")
+    print("PPO training finished")
+    print("Model saved to:", f"{PPO_MODEL_PATH}.zip")
 
 
 def main():
-    # default training run
+    # Default training run
     train_ppo(total_timesteps=100_000, seed=42)
 
 
